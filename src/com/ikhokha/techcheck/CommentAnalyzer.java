@@ -7,6 +7,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class CommentAnalyzer {
 	
@@ -23,23 +25,8 @@ public class CommentAnalyzer {
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
 			
 			String line;
-			int count = 0;
 			while ((line = reader.readLine()) != null) {
-				count++;
-
-				if (line.length() < 15) {
-					incOccurrence(resultsMap, "SHORTER_THAN_15");
-				}
-
-				if (line.contains("Mover")) {
-
-					incOccurrence(resultsMap, "MOVER_MENTIONS");
-				}
-
-				if (line.contains("Shaker")) {
-					System.out.println(count + " " + line);
-					incOccurrence(resultsMap, "SHAKER_MENTIONS");
-				}
+				metrics(resultsMap, line);
 			}
 			
 		} catch (FileNotFoundException e) {
@@ -63,6 +50,41 @@ public class CommentAnalyzer {
 		
 		countMap.putIfAbsent(key, 0);
 		countMap.put(key, countMap.get(key) + 1);
+	}
+
+	/**
+	 * This method check if a line contains a URL
+	 * @param line a string of text
+	 * @return boolean value
+	 */
+	public boolean containsUrl(String line) {
+		String regex = "((http:\\/\\/|https:\\/\\/)?(www.)?(([a-zA-Z0-9-]){2,}\\.){1,4}([a-zA-Z]){2,6}(\\/([a-zA-Z-_\\/\\.0-9#:?=&;,]*)?)?)";
+		Pattern pattern = Pattern.compile(regex);
+		Matcher matcher = pattern.matcher(line);
+		return matcher.find();
+	}
+
+	public void metrics(Map<String, Integer> resultsMap, String line) {
+		if (line.length() < 15) {
+			incOccurrence(resultsMap, "SHORTER_THAN_15");
+		}
+
+		if (line.contains("Mover")) {
+
+			incOccurrence(resultsMap, "MOVER_MENTIONS");
+		}
+
+		if (line.contains("Shaker")) {
+			incOccurrence(resultsMap, "SHAKER_MENTIONS");
+		}
+
+		if (line.contains("?")) {
+			incOccurrence(resultsMap, "QUESTIONS");
+		}
+
+		if (containsUrl(line)) {
+			incOccurrence(resultsMap, "SPAM");
+		}
 	}
 
 }
