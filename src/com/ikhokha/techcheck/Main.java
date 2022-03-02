@@ -6,21 +6,30 @@ import java.util.Map;
 
 public class Main {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws InterruptedException {
 		
 		Map<String, Integer> totalResults = new HashMap<>();
 				
 		File docPath = new File("docs");
 		File[] commentFiles = docPath.listFiles((d, n) -> n.endsWith(".txt"));
-		
-		for (File commentFile : commentFiles) {
-			CommentAnalyzer commentAnalyzer = new CommentAnalyzer(commentFile);
-			Map<String, Integer> fileResults = commentAnalyzer.analyze();
-			addReportResults(fileResults, totalResults);
+
+		int noThreads = commentFiles.length/3;
+		CommentAnalyzer[] cAnalyzer = new CommentAnalyzer[noThreads];
+
+
+		for (int i = 0; i < noThreads; i++) {
+			cAnalyzer[i] = new CommentAnalyzer(commentFiles, ( i * commentFiles.length)/noThreads, ( (i+1) * commentFiles.length)/noThreads);
+			cAnalyzer[i].start();
+		}
+
+		for (int i = 0; i < noThreads; i++) {
+			cAnalyzer[i].join();
+			addReportResults(cAnalyzer[i].fileResults, totalResults);
 		}
 		
 		System.out.println("RESULTS\n=======");
 		totalResults.forEach((k,v) -> System.out.println(k + " : " + v));
+
 	}
 	
 	/**

@@ -10,15 +10,20 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class CommentAnalyzer {
-	
-	private File file;
-	
-	public CommentAnalyzer(File file) {
-		this.file = file;
+public class CommentAnalyzer extends java.lang.Thread {
+
+	private File[] commentFiles;
+	private int startIndex, endIndex;
+
+	public Map<String, Integer> fileResults;
+
+	public CommentAnalyzer(File[] commentFiles, int startIndex, int endIndex) {
+		this.commentFiles = commentFiles;
+		this.startIndex = startIndex;
+		this.endIndex = endIndex;
 	}
 	
-	public Map<String, Integer> analyze() {
+	public  void analyze(File file) {
 		
 		Map<String, Integer> resultsMap = new HashMap<>();
 		
@@ -36,17 +41,26 @@ public class CommentAnalyzer {
 			System.out.println("IO Error processing file: " + file.getAbsolutePath());
 			e.printStackTrace();
 		}
-		
-		return resultsMap;
-		
+
+		if (fileResults == null) {
+			fileResults = resultsMap;
+		} else{
+			addReportResults(resultsMap, fileResults);
+		}
 	}
-	
+
+	public void run() {
+		for (int i = startIndex; i < endIndex; i++) {
+			analyze(commentFiles[i]);
+		}
+	}
+
 	/**
 	 * This method increments a counter by 1 for a match type on the countMap. Uninitialized keys will be set to 1
 	 * @param countMap the map that keeps track of counts
 	 * @param key the key for the value to increment
 	 */
-	private void incOccurrence(Map<String, Integer> countMap, String key) {
+	private synchronized void  incOccurrence(Map<String, Integer> countMap, String key) {
 		
 		countMap.putIfAbsent(key, 0);
 		countMap.put(key, countMap.get(key) + 1);
@@ -68,7 +82,7 @@ public class CommentAnalyzer {
 		if (line.length() < 15) {
 			incOccurrence(resultsMap, "SHORTER_THAN_15");
 		}
-
+		// note: made an assumption that case sensitivity is important
 		if (line.contains("Mover")) {
 
 			incOccurrence(resultsMap, "MOVER_MENTIONS");
@@ -85,6 +99,15 @@ public class CommentAnalyzer {
 		if (containsUrl(line)) {
 			incOccurrence(resultsMap, "SPAM");
 		}
+	}
+
+	private static void addReportResults(Map<String, Integer> source, Map<String, Integer> target) {
+
+		for (Map.Entry<String, Integer> entry : source.entrySet()) {
+			target.putIfAbsent(entry.getKey(), 0);
+			target.put(entry.getKey(), target.get(entry.getKey()) + entry.getValue());
+		}
+
 	}
 
 }
